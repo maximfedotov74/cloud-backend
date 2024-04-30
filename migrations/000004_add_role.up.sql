@@ -1,0 +1,7 @@
+CREATE TABLE IF NOT EXISTS public.role
+(
+  role_id SERIAL PRIMARY KEY,
+  created_at timestamp(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at timestamp(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  title VARCHAR(100) NOT NULL UNIQUE
+);
