@@ -21,8 +21,7 @@ var once sync.Once
 var minioClient *minio.Client
 
 type FileClient struct {
-	minio      *minio.Client
-	mainBucket string
+	minio *minio.Client
 }
 
 type UploadResponse struct {
@@ -56,16 +55,15 @@ func (c *FileClient) CreateBucket(ctx context.Context, bucketName string) error 
 	return nil
 }
 
-func New(minioUrl string, user string, password string, bucket string, ctx context.Context) *FileClient {
+func New(minioUrl string, user string, password string) *FileClient {
 	once.Do(func() {
 		client, err := minio.New(minioUrl, &minio.Options{Creds: credentials.NewStaticV4(user, password, ""), Secure: false})
 		if err != nil {
 			log.Fatalf("Failed to connect to minio service, cause: %s", err.Error())
 		}
-
 		minioClient = client
 	})
-	return &FileClient{minio: minioClient, mainBucket: bucket}
+	return &FileClient{minio: minioClient}
 }
 
 func (c *FileClient) Upload(ctx context.Context, h *multipart.FileHeader) (*UploadResponse, error) {
@@ -86,12 +84,13 @@ func (c *FileClient) Upload(ctx context.Context, h *multipart.FileHeader) (*Uplo
 	fileName := uuid.New().String()
 	reader := bytes.NewReader(fileBytes)
 	newName := fileName + ext
-	_, err = c.minio.PutObject(ctx, c.mainBucket, newName, reader, reader.Size(), minio.PutObjectOptions{
+	//change empty string to bucket name
+	_, err = c.minio.PutObject(ctx, "", newName, reader, reader.Size(), minio.PutObjectOptions{
 		ContentType:  contentType,
 		UserMetadata: map[string]string{"x-amz-acl": "public-read"},
 	})
 	if err != nil {
 		return nil, fmt.Errorf("error when uploading file, cause: %s", err.Error())
 	}
-	return &UploadResponse{Path: path.Join("/", "storage", c.mainBucket, newName)}, nil
+	return &UploadResponse{Path: path.Join("/", "storage", "", newName)}, nil
 }

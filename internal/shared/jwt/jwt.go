@@ -17,7 +17,7 @@ type Tokens struct {
 type TokenType int
 
 type UserClaims struct {
-	UserId    int    `json:"user_id" validate:"required"`
+	UserId    string `json:"user_id" validate:"required"`
 	UserAgent string `json:"user_agent" validate:"required"`
 }
 

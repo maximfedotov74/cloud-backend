@@ -119,7 +119,7 @@ func (h *HelloHandler) getMessageById(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.Atoi(queryId)
 
 	if err != nil {
-		utils.WriteJSON(w, http.StatusBadRequest, ex.NewErr(ex.VALIDATION_ID, http.StatusBadRequest))
+		utils.WriteJSON(w, http.StatusBadRequest, ex.NewErr(ex.ValidationId, http.StatusBadRequest))
 		return
 	}
 
@@ -134,16 +134,17 @@ func (h *HelloHandler) getMessageById(w http.ResponseWriter, r *http.Request) {
 		utils.WriteJSON(w, http.StatusNotFound, ex.NewErr("Сообщение не найдено!", http.StatusNotFound))
 		return
 	}
+
 	utils.WriteJSON(w, http.StatusOK, msg)
 }
 
 func (h *HelloHandler) auth(w http.ResponseWriter, r *http.Request) {
-	user, ok := r.Context().Value("user").(string)
+	// user, ok := r.Context().Value("user").(string)
 
-	if !ok {
-		utils.WriteJSON(w, http.StatusUnauthorized, ex.NewErr(ex.UNAUTHORIZED, http.StatusUnauthorized))
-		return
-	}
+	// if !ok {
+	// 	utils.WriteJSON(w, http.StatusUnauthorized, ex.NewErr(ex.UNAUTHORIZED, http.StatusUnauthorized))
+	// 	return
+	// }
 
-	utils.WriteJSON(w, http.StatusAccepted, model.User{Token: user})
+	utils.WriteJSON(w, http.StatusAccepted, "asd")
 }

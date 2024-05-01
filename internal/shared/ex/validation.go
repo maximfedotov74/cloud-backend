@@ -26,13 +26,13 @@ func NewValidErr(e []validationErrorItem) ValidationError {
 func error_message(fe validator.FieldError) string {
 	switch fe.Tag() {
 	case "required":
-		return VALIDATION_REQUIRED
+		return ValidationRequired
 	case "email":
-		return VALIDATION_EMAIL
+		return ValidationEmail
 	case "min":
-		return VALIDATION_MIN
+		return ValidationMin
 	case "max":
-		return VALIDATION_MAX
+		return ValidationMax
 	}
 
 	return fe.Error()

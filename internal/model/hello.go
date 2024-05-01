@@ -8,7 +8,3 @@ type Hello struct {
 type CreateMsgDto struct {
 	Message string `json:"message" validate:"required,min=5"`
 }
-
-type User struct {
-	Token string `json:"token"`
-}

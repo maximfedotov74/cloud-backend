@@ -16,6 +16,10 @@ type Transaction interface {
 	Begin(ctx context.Context) (pgx.Tx, error)
 }
 
+type TransactionManager interface {
+	Begin(ctx context.Context) (pgx.Tx, error)
+}
+
 type PostgresClient interface {
 	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
 	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
