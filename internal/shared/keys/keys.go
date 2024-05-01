@@ -23,3 +23,6 @@ const FileTable = "public.file"
 const FileLinkTable = "public.file_link"
 const FolderTable = "public.folder"
 const FolderLinkTable = "public.folder_link"
+
+const AccessToken = "access_token"
+const RefreshToken = "refresh_token"

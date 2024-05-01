@@ -63,6 +63,7 @@ func New(minioUrl string, user string, password string) *FileClient {
 		}
 		minioClient = client
 	})
+	log.Println("File manager Minio successfully connected!")
 	return &FileClient{minio: minioClient}
 }
 

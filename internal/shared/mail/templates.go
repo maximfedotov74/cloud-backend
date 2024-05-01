@@ -1,11 +1,15 @@
 package mail
 
-import "fmt"
+import (
+	"fmt"
+	"log"
+)
 
 const site = "CloudMax"
 
 func (m *MailService) createActivationTemplate(link string, email string) string {
 	l := m.config.AppLink + link
+	log.Println(l)
 	return fmt.Sprintf(`
   <!DOCTYPE html>
 		<html>
@@ -51,9 +55,7 @@ func (m *MailService) createActivationTemplate(link string, email string) string
 						Спасибо за регистрацию в нашем облачном хранилище. Для завершения регистрации,
 						пожалуйста, нажмите на кнопку ниже:
 					</p>
-					<a href="%s" class="button"
-						>Подтвердить регистрацию</a
-					>
+					<a href="%s" class="button">Подтвердить регистрацию</a>
 					<p>Если у вас возникли вопросы, пожалуйста, свяжитесь с нами.</p>
 					<div class="footer">
 						<p>С уважением,<br />Команда сайта</p>

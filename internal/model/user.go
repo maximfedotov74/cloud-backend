@@ -12,6 +12,13 @@ type User struct {
 	IsActivated  bool      `json:"is_activated" example:"false" validate:"required"`
 }
 
+type UserActivation struct {
+	UserActivationId      int       `json:"user_activation_id" validate:"required"`
+	ActivationAccountLink string    `json:"activation_account_link"`
+	EndTime               time.Time `json:"end_time" validate:"required"`
+	UserId                string    `json:"user_id" example:"9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d" validate:"required"`
+}
+
 type CreatedUser struct {
 	UserId         string `json:"user_id" example:"9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d" validate:"required"`
 	Email          string `json:"email" example:"maxim@yandex.ru" validate:"required"`

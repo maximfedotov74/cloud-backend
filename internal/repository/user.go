@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"strings"
 
@@ -55,21 +56,14 @@ func (r *UserRepository) Create(ctx context.Context, input dto.CreateUser, tx db
 	if fall != nil {
 		return nil, fall
 	}
-	q = fmt.Sprintf("INSERT INTO %s (user_id, activation_account_link) VALUES ($1, %s) RETURNING activation_account_link;",
-		keys.UserActivationTable, keys.PsqlUUID)
 
-	row = tx.QueryRow(ctx, q, id)
+	link, fall := r.AddActivationLink(ctx, tx, id, false)
 
-	var link string
-
-	err = row.Scan(&link)
-
-	if err != nil {
-		fall = ex.ServerError(err.Error())
+	if fall != nil {
 		return nil, fall
 	}
 
-	return &model.CreatedUser{UserId: id, Email: email, ActivationLink: link}, nil
+	return &model.CreatedUser{UserId: id, Email: email, ActivationLink: *link}, nil
 }
 
 func (r *UserRepository) Update(ctx context.Context, input dto.UpdateUser, id int) ex.Error {
@@ -214,4 +208,80 @@ func (r *UserRepository) ChangePassword(ctx context.Context, userId string, newP
 	}
 
 	return nil
+}
+
+func (r *UserRepository) AddActivationLink(ctx context.Context, tx db.Transaction, userId string, withTime bool) (*string, ex.Error) {
+
+	activation, fall := r.FindActivationLink(ctx, userId, withTime)
+
+	if fall != nil && fall.Status() == http.StatusInternalServerError {
+		return nil, fall
+	}
+
+	if fall != nil && fall.Status() == http.StatusNotFound {
+		query := fmt.Sprintf(`INSERT INTO %s (user_id) VALUES ($1) RETURNING activation_account_link;`,
+			keys.UserActivationTable)
+		row := tx.QueryRow(ctx, query, userId)
+		var link string
+		err := row.Scan(&link)
+		if err != nil {
+			log.Println(err.Error())
+			return nil, ex.ServerError(msg.UserErrorWhenAddActivationLink)
+		}
+		return &link, nil
+	}
+
+	if withTime {
+		return nil, ex.NewErr(msg.UserActionLinkAlreadyExists, http.StatusBadRequest)
+	}
+	link, fall := r.UpdateActivationLink(ctx, tx, activation.UserActivationId)
+	if fall != nil {
+		return nil, fall
+	}
+	return link, nil
+}
+
+func (r *UserRepository) FindActivationLink(ctx context.Context, userId string, withTime bool) (*model.UserActivation, ex.Error) {
+	q := ""
+
+	if withTime {
+		q = fmt.Sprintf("SELECT user_activation_id, activation_account_link, end_time, user_id FROM %s WHERE user_id = $1 AND end_time > %s;",
+			keys.UserActivationTable, keys.PsqlCurrentTimestamp)
+	} else {
+		q = fmt.Sprintf("SELECT user_activation_id, activation_account_link, end_time, user_id FROM %s WHERE user_id = $1;", keys.UserActivationTable)
+	}
+
+	row := r.db.QueryRow(ctx, q, userId)
+
+	a := model.UserActivation{}
+
+	err := row.Scan(&a.UserActivationId, &a.ActivationAccountLink, &a.EndTime, &a.UserId)
+
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ex.NewErr(msg.UserActivationNotFound, http.StatusNotFound)
+		}
+		return nil, ex.ServerError(err.Error())
+	}
+
+	return &a, nil
+}
+
+func (r *UserRepository) UpdateActivationLink(ctx context.Context, tx db.Transaction, activationId int) (*string, ex.Error) {
+	query := fmt.Sprintf(`UPDATE %s SET
+	activation_account_link = %s,
+	end_time = %s
+	WHERE order_activation_id = $1 RETURNING activation_account_link;`,
+		keys.UserActivationTable, keys.PsqlUUID, fmt.Sprintf("%s + INTERVAL '30 minutes'", keys.PsqlCurrentTimestamp))
+
+	row := tx.QueryRow(ctx, query, activationId)
+
+	var link string
+
+	err := row.Scan(&link)
+
+	if err != nil {
+		return nil, ex.ServerError(err.Error())
+	}
+	return &link, nil
 }

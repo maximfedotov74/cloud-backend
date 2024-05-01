@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/jackc/pgx/v5"
@@ -24,7 +25,7 @@ func NewSessionRepository(db db.PostgresClient) *SessionRepository {
 }
 
 func (r *SessionRepository) Create(ctx context.Context, dto dto.CreateSession) ex.Error {
-	q := fmt.Sprintf("SELECT session_id, user_id, user_agent, token FROM %s WHERE user_id = $1 AND user_agent = $2;", keys.SessionTable)
+	q := fmt.Sprintf("SELECT session_id, user_id, user_agent, refresh_token FROM %s WHERE user_id = $1 AND user_agent = $2;", keys.SessionTable)
 
 	sessionModel := model.Session{}
 
@@ -34,21 +35,21 @@ func (r *SessionRepository) Create(ctx context.Context, dto dto.CreateSession) e
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			q = fmt.Sprintf("INSERT INTO %s (token, user_agent, user_id) VALUES ($1, $2, $3) RETURNING session_id;", keys.SessionTable)
-			_, err = r.db.Exec(ctx, q, dto.Token, dto.UserAgent, dto.UserId)
+			q = fmt.Sprintf("INSERT INTO %s (refresh_token, user_agent, user_id, ip) VALUES ($1, $2, $3, $4) RETURNING session_id;", keys.SessionTable)
+			_, err = r.db.Exec(ctx, q, dto.Token, dto.UserAgent, dto.UserId, dto.Ip)
 			if err != nil {
+				log.Println(err.Error())
 				return ex.ServerError(msg.SessionCreateError)
 			}
 			return nil
 		}
 		return ex.ServerError(err.Error())
 	}
-	q = fmt.Sprintf("UPDATE %s SET token = $1, updated_at = $2 WHERE session_id = $3;", keys.SessionTable)
+	q = fmt.Sprintf("UPDATE %s SET refresh_token = $1, updated_at = %s WHERE session_id = $2;", keys.SessionTable, keys.PsqlCurrentTimestamp)
 
-	_, err = r.db.Exec(ctx, q, dto.Token, keys.PsqlCurrentTimestamp, sessionModel.SessionId)
+	_, err = r.db.Exec(ctx, q, dto.Token, sessionModel.SessionId)
 
 	if err != nil {
-
 		return ex.ServerError(msg.SessionUpdateError)
 	}
 
@@ -57,7 +58,7 @@ func (r *SessionRepository) Create(ctx context.Context, dto dto.CreateSession) e
 
 func (r *SessionRepository) FindByAgentAndToken(ctx context.Context, agent string, token string) (*model.Session, ex.Error) {
 
-	query := fmt.Sprintf("SELECT session_id, user_id, user_agent, token, created_at, updated_at FROM %s WHERE user_agent = $1 AND token = $2;",
+	query := fmt.Sprintf("SELECT session_id, user_id, user_agent, refresh_token, created_at, updated_at, ip FROM %s WHERE user_agent = $1 AND token = $2;",
 		keys.SessionTable)
 
 	sessionModel := model.Session{}
@@ -65,7 +66,7 @@ func (r *SessionRepository) FindByAgentAndToken(ctx context.Context, agent strin
 	row := r.db.QueryRow(ctx, query, agent, token)
 
 	err := row.Scan(&sessionModel.SessionId, &sessionModel.UserId, &sessionModel.UserAgent,
-		&sessionModel.Token, &sessionModel.CreatedAt, &sessionModel.UpdatedAt,
+		&sessionModel.Token, &sessionModel.CreatedAt, &sessionModel.UpdatedAt, &sessionModel.Ip,
 	)
 
 	if err != nil {
@@ -78,7 +79,7 @@ func (r *SessionRepository) FindByAgentAndToken(ctx context.Context, agent strin
 
 func (r *SessionRepository) FindByAgentAndUserId(ctx context.Context, agent string, userId int) (*model.Session, ex.Error) {
 
-	query := fmt.Sprintf("SELECT session_id, user_id, user_agent, token, created_at, updated_at FROM %s WHERE user_agent = $1 AND user_id = $2;",
+	query := fmt.Sprintf("SELECT session_id, user_id, user_agent, refresh_token, created_at, updated_at, ip FROM %s WHERE user_agent = $1 AND user_id = $2;",
 		keys.SessionTable)
 
 	sessionModel := model.Session{}
@@ -86,7 +87,7 @@ func (r *SessionRepository) FindByAgentAndUserId(ctx context.Context, agent stri
 	row := r.db.QueryRow(ctx, query, agent, userId)
 
 	err := row.Scan(&sessionModel.SessionId, &sessionModel.UserId, &sessionModel.UserAgent,
-		&sessionModel.Token, &sessionModel.CreatedAt, &sessionModel.UpdatedAt,
+		&sessionModel.Token, &sessionModel.CreatedAt, &sessionModel.UpdatedAt, &sessionModel.Ip,
 	)
 
 	if err != nil {
@@ -116,7 +117,7 @@ func (r *SessionRepository) RemoveExceptCurrentSession(ctx context.Context, user
 }
 
 func (r *SessionRepository) RemoveSessionByToken(ctx context.Context, token string) ex.Error {
-	query := fmt.Sprintf("DELETE FROM %s WHERE token = $1;", keys.SessionTable)
+	query := fmt.Sprintf("DELETE FROM %s WHERE refresh_token = $1;", keys.SessionTable)
 	_, err := r.db.Exec(ctx, query, token)
 	if err != nil {
 		return ex.ServerError(err.Error())
@@ -135,7 +136,7 @@ func (r *SessionRepository) RemoveAllSessions(ctx context.Context, userId int) e
 }
 
 func (r *SessionRepository) GetUserSessions(ctx context.Context, userId int, token string) (*model.UserSessionsResponse, ex.Error) {
-	q := fmt.Sprintf(`SELECT session_id, user_id, user_agent, token, created_at, updated_at, ip
+	q := fmt.Sprintf(`SELECT session_id, user_id, user_agent, refresh_token, created_at, updated_at, ip
 	FROM %s WHERE user_id = $1 ORDER BY updated_at DESC;`, keys.SessionTable)
 
 	var sessions []model.Session

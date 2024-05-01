@@ -15,6 +15,7 @@ import (
 
 type userMailService interface {
 	SendChangePasswordEmail(to string, subject string, code string) error
+	SendActivationEmail(to string, subject string, link string) error
 }
 
 type userRepository interface {
@@ -36,11 +37,6 @@ type userSessionRepository interface {
 	RemoveAllSessions(ctx context.Context, userId int) ex.Error
 }
 
-type jwtService interface {
-	Sign(claims jwt.UserClaims) (jwt.Tokens, error)
-	Parse(token string, tokenType jwt.TokenType) (*jwt.UserClaims, error)
-}
-
 type fileClient interface {
 	CreateBucket(ctx context.Context, bucketName string) error
 }
@@ -48,13 +44,13 @@ type fileClient interface {
 type UserService struct {
 	userRepository     userRepository
 	sessionRepository  userSessionRepository
-	jwtService         jwtService
+	jwtService         *jwt.JwtService
 	mailService        userMailService
 	transactionManager db.TransactionManager
-	fileClient
+	fileClient         fileClient
 }
 
-func NewUserService(userRepository userRepository, sessionRepository userSessionRepository, jwtService jwtService,
+func NewUserService(userRepository userRepository, sessionRepository userSessionRepository, jwtService *jwt.JwtService,
 	mailService userMailService, transactionManager db.TransactionManager, fileClient fileClient) *UserService {
 	return &UserService{userRepository: userRepository, sessionRepository: sessionRepository,
 		jwtService: jwtService, mailService: mailService, transactionManager: transactionManager, fileClient: fileClient}
@@ -63,7 +59,6 @@ func NewUserService(userRepository userRepository, sessionRepository userSession
 func (s *UserService) Create(ctx context.Context, input dto.CreateUser) (*model.CreatedUser, ex.Error) {
 
 	tx, err := s.transactionManager.Begin(ctx)
-
 	var fall ex.Error = nil
 
 	if err != nil {
@@ -78,6 +73,14 @@ func (s *UserService) Create(ctx context.Context, input dto.CreateUser) (*model.
 			tx.Commit(ctx)
 		}
 	}()
+
+	hash, err := password.HashPassword(input.Password)
+
+	if err != nil {
+		fall = ex.ServerError(err.Error())
+		return nil, fall
+	}
+	input.Password = hash
 
 	res, fall := s.userRepository.Create(ctx, input, tx)
 
@@ -180,7 +183,7 @@ func (s *UserService) ChangePassword(ctx context.Context, input dto.ChangePasswo
 		return nil, ex.ServerError(err.Error())
 	}
 
-	tokenDto := dto.CreateSession{UserId: user.UserId, UserAgent: localSession.UserAgent, Token: tokens.RefreshToken}
+	tokenDto := dto.CreateSession{UserId: user.UserId, UserAgent: localSession.UserAgent, Token: tokens.RefreshToken, Ip: localSession.Ip}
 	fall = s.sessionRepository.Create(ctx, tokenDto)
 
 	if fall != nil {

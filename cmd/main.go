@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/go-co-op/gocron"
 	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/maximfedotov74/cloud-api/docs"
 	"github.com/maximfedotov74/cloud-api/internal/cfg"
@@ -33,7 +34,7 @@ func main() {
 	runServer(ctx)
 }
 
-func initDeps(r *http.ServeMux, cfg *cfg.Config, dbClient *pgxpool.Pool, fileClient *file.FileClient) {
+func initDeps(r *http.ServeMux, cfg *cfg.Config, dbClient *pgxpool.Pool, fileClient *file.FileClient, cron *gocron.Scheduler) {
 
 	jwtService := jwt.NewJwtService(jwt.JwtConfig{
 		RefreshTokenExp:    cfg.RefreshTokenExp,
@@ -47,11 +48,15 @@ func initDeps(r *http.ServeMux, cfg *cfg.Config, dbClient *pgxpool.Pool, fileCli
 	sessionRepository := repository.NewSessionRepository(dbClient)
 
 	roleRepository := repository.NewRoleRepository(dbClient)
+
 	userRepository := repository.NewUserRepository(dbClient, roleRepository)
-
 	userService := service.NewUserService(userRepository, sessionRepository, jwtService, mailService, dbClient, fileClient)
+	userHandler := handler.NewUserHandler(userService, r)
+	userHandler.StartHandlers()
 
-	fmt.Println(userService)
+	authService := service.NewAuthService(userService, sessionRepository, mailService, jwtService)
+	authHandler := handler.NewAuthHandler(authService, r)
+	authHandler.StartHandlers()
 
 	helloHandler := handler.NewHelloHandler(cfg, r)
 	helloHandler.StartHandlers()
@@ -69,7 +74,12 @@ func runServer(ctx context.Context) {
 
 	fileClient := file.New(config.MinioApiUrl, config.MinioUser, config.MinioPassword)
 
-	initDeps(mux, config, db, fileClient)
+	cron := gocron.NewScheduler(time.UTC)
+
+	cron.StartAsync()
+	log.Println("Scheduler service started successfully!")
+
+	initDeps(mux, config, db, fileClient, cron)
 
 	r := mw.ApplyLogger(mw.ApplyHeaders(mux))
 
@@ -80,7 +90,7 @@ func runServer(ctx context.Context) {
 
 	go func() {
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("listen and serve: %v", err)
+			log.Fatalf("Cannot start http server, because: %v", err)
 		}
 	}()
 
@@ -98,7 +108,9 @@ func runServer(ctx context.Context) {
 		log.Fatalf("shutdown: %v", err)
 	}
 	db.Close()
-	log.Println("Db closed")
+	log.Println("Db connection closed")
+	cron.Stop()
+	log.Println("Scheduler service stopped")
 
 	select {
 	case <-shutdownCtx.Done():
