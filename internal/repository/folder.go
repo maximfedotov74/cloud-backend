@@ -63,7 +63,6 @@ func (r *FolderRepository) FindByTitleInFolder(ctx context.Context, parentFolder
 	}
 
 	return true, nil
-
 }
 
 func (r *FolderRepository) Create(ctx context.Context, title string, parentId *string, userId string) ex.Error {

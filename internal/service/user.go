@@ -9,6 +9,7 @@ import (
 	"github.com/maximfedotov74/cloud-api/internal/msg"
 	"github.com/maximfedotov74/cloud-api/internal/shared/db"
 	"github.com/maximfedotov74/cloud-api/internal/shared/ex"
+	"github.com/maximfedotov74/cloud-api/internal/shared/file"
 	"github.com/maximfedotov74/cloud-api/internal/shared/jwt"
 	"github.com/maximfedotov74/cloud-api/internal/shared/password"
 )
@@ -37,21 +38,17 @@ type userSessionRepository interface {
 	RemoveAllSessions(ctx context.Context, userId string) ex.Error
 }
 
-type fileClient interface {
-	CreateBucket(ctx context.Context, bucketName string) error
-}
-
 type UserService struct {
 	userRepository     userRepository
 	sessionRepository  userSessionRepository
 	jwtService         *jwt.JwtService
 	mailService        userMailService
 	transactionManager db.TransactionManager
-	fileClient         fileClient
+	fileClient         *file.FileClient
 }
 
 func NewUserService(userRepository userRepository, sessionRepository userSessionRepository, jwtService *jwt.JwtService,
-	mailService userMailService, transactionManager db.TransactionManager, fileClient fileClient) *UserService {
+	mailService userMailService, transactionManager db.TransactionManager, fileClient *file.FileClient) *UserService {
 	return &UserService{userRepository: userRepository, sessionRepository: sessionRepository,
 		jwtService: jwtService, mailService: mailService, transactionManager: transactionManager, fileClient: fileClient}
 }

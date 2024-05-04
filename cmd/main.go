@@ -50,10 +50,12 @@ func initDeps(r *http.ServeMux, cfg *cfg.Config, dbClient *pgxpool.Pool, fileCli
 	roleRepository := repository.NewRoleRepository(dbClient)
 	userRepository := repository.NewUserRepository(dbClient, roleRepository)
 	folderRepository := repository.NewFolderRepository(dbClient)
+	fileRepository := repository.NewFileRepository(dbClient)
 
 	userService := service.NewUserService(userRepository, sessionRepository, jwtService, mailService, dbClient, fileClient)
 	authService := service.NewAuthService(userService, sessionRepository, mailService, jwtService)
 	folderService := service.NewFolderService(folderRepository)
+	fileService := service.NewFileService(fileRepository, folderRepository, dbClient, fileClient)
 
 	authMW := mw.NewAuthMW(userService, sessionRepository, jwtService)
 	roleMw := mw.NewRoleMW(roleRepository)
@@ -62,10 +64,12 @@ func initDeps(r *http.ServeMux, cfg *cfg.Config, dbClient *pgxpool.Pool, fileCli
 	authHandler := handler.NewAuthHandler(authService, r)
 	helloHandler := handler.NewHelloHandler(cfg, r, authMW, roleMw)
 	folderHandler := handler.NewFolderHandler(folderService, r, authMW)
+	fileHandler := handler.NewFileHandler(fileService, r, authMW)
 
 	authHandler.StartHandlers()
 	userHandler.StartHandlers()
 	folderHandler.StartHandlers()
+	fileHandler.StartHandlers()
 	helloHandler.StartHandlers()
 }
 

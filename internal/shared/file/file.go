@@ -8,11 +8,9 @@ import (
 	"log"
 	"mime/multipart"
 	"path"
-	"path/filepath"
-	"strings"
 	"sync"
 
-	"github.com/google/uuid"
+	"github.com/maximfedotov74/cloud-api/internal/shared/utils"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 )
@@ -67,7 +65,7 @@ func New(minioUrl string, user string, password string) *FileClient {
 	return &FileClient{minio: minioClient}
 }
 
-func (c *FileClient) Upload(ctx context.Context, h *multipart.FileHeader) (*UploadResponse, error) {
+func (c *FileClient) Upload(ctx context.Context, bucketName string, fileName string, h *multipart.FileHeader) (*UploadResponse, error) {
 	file, err := h.Open()
 	if err != nil {
 		return nil, fmt.Errorf("error when open file, cause: %s", err.Error())
@@ -81,17 +79,16 @@ func (c *FileClient) Upload(ctx context.Context, h *multipart.FileHeader) (*Uplo
 	// splittedContentType := strings.Split(contentType, "/")
 	// fileType := splittedContentType[0]
 	// extType := splittedContentType[1]
-	ext := strings.TrimPrefix(filepath.Ext(h.Filename), filepath.Base(h.Filename))
-	fileName := uuid.New().String()
-	reader := bytes.NewReader(fileBytes)
+	ext := utils.GetFileExt(h.Filename)
 	newName := fileName + ext
+	reader := bytes.NewReader(fileBytes)
 	//change empty string to bucket name
-	_, err = c.minio.PutObject(ctx, "", newName, reader, reader.Size(), minio.PutObjectOptions{
+	_, err = c.minio.PutObject(ctx, bucketName, newName, reader, reader.Size(), minio.PutObjectOptions{
 		ContentType:  contentType,
 		UserMetadata: map[string]string{"x-amz-acl": "public-read"},
 	})
 	if err != nil {
 		return nil, fmt.Errorf("error when uploading file, cause: %s", err.Error())
 	}
-	return &UploadResponse{Path: path.Join("/", "storage", "", newName)}, nil
+	return &UploadResponse{Path: path.Join("/", "storage", bucketName, newName)}, nil
 }
