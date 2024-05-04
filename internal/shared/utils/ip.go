@@ -7,27 +7,38 @@ import (
 	"strings"
 )
 
-func GetIP(r *http.Request) (string, error) {
-	ip := r.Header.Get("X-Real-IP")
-	if net.ParseIP(ip) != nil {
-		return ip, nil
+func GetIP(r *http.Request) (net.IP, error) {
+	netIp := net.ParseIP(r.Header.Get("X-Real-IP"))
+
+	if netIp != nil {
+		return netIp, nil
 	}
 
-	ip = r.Header.Get("X-Forward-For")
-	for _, i := range strings.Split(ip, ",") {
-		if net.ParseIP(i) != nil {
-			return i, nil
+	forwardFor := r.Header.Get("X-Forward-For")
+	for _, i := range strings.Split(forwardFor, ",") {
+		netIp := net.ParseIP(i)
+
+		if netIp != nil {
+			return netIp, nil
 		}
 	}
 
 	ip, _, err := net.SplitHostPort(r.RemoteAddr)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	if net.ParseIP(ip) != nil {
-		return ip, nil
+	netIp = net.ParseIP(ip)
+
+	if netIp != nil {
+		return netIp, nil
 	}
 
-	return "", errors.New("no valid ip found")
+	netIp = net.ParseIP(ip)
+
+	if netIp != nil {
+		return netIp, nil
+	}
+
+	return nil, errors.New("no valid ip found")
 }

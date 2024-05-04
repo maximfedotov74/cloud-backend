@@ -1,8 +1,10 @@
 package dto
 
+import "net"
+
 type CreateSession struct {
 	UserId    string `json:"user_id"`
 	UserAgent string `json:"user_agent"`
 	Token     string `json:"token"`
-	Ip        string `json:"-"`
+	Ip        net.IP `json:"-"`
 }

@@ -22,7 +22,7 @@ func SetTokensCookie(tokens jwt.Tokens) (*http.Cookie, *http.Cookie) {
 	return accessToken, refreshToken
 }
 
-func RemoveTokensCookie(tokens jwt.Tokens) (*http.Cookie, *http.Cookie) {
+func RemoveTokensCookie() (*http.Cookie, *http.Cookie) {
 	accessToken := &http.Cookie{
 		Name:   keys.AccessToken,
 		Value:  "",

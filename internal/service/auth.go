@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"net"
 	"net/http"
 
 	"github.com/maximfedotov74/cloud-api/internal/dto"
@@ -46,7 +47,7 @@ func NewAuthService(userService authUserService, sessionService authSessionRepos
 	}
 }
 
-func (s *AuthService) Login(ctx context.Context, input dto.CreateUser, userAgent string, ip string) (*model.LoginResponse, ex.Error) {
+func (s *AuthService) Login(ctx context.Context, input dto.CreateUser, userAgent string, ip net.IP) (*model.LoginResponse, ex.Error) {
 	user, fall := s.userService.FindByEmail(ctx, input.Email)
 
 	if fall != nil {

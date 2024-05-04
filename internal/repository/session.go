@@ -77,7 +77,7 @@ func (r *SessionRepository) FindByAgentAndToken(ctx context.Context, agent strin
 
 }
 
-func (r *SessionRepository) FindByAgentAndUserId(ctx context.Context, agent string, userId int) (*model.Session, ex.Error) {
+func (r *SessionRepository) FindByAgentAndUserId(ctx context.Context, agent string, userId string) (*model.Session, ex.Error) {
 
 	query := fmt.Sprintf("SELECT session_id, user_id, user_agent, refresh_token, created_at, updated_at, ip FROM %s WHERE user_agent = $1 AND user_id = $2;",
 		keys.SessionTable)
@@ -91,6 +91,7 @@ func (r *SessionRepository) FindByAgentAndUserId(ctx context.Context, agent stri
 	)
 
 	if err != nil {
+		log.Println(err.Error())
 		return nil, ex.NewErr(msg.SessionNotFound, http.StatusNotFound)
 	}
 
@@ -98,7 +99,7 @@ func (r *SessionRepository) FindByAgentAndUserId(ctx context.Context, agent stri
 
 }
 
-func (r *SessionRepository) RemoveSession(ctx context.Context, userId int, sessionId int) ex.Error {
+func (r *SessionRepository) RemoveSession(ctx context.Context, userId string, sessionId int) ex.Error {
 	query := fmt.Sprintf("DELETE FROM %s WHERE user_id = $1 AND session_id = $2;", keys.SessionTable)
 	_, err := r.db.Exec(ctx, query, userId, sessionId)
 	if err != nil {
@@ -107,7 +108,7 @@ func (r *SessionRepository) RemoveSession(ctx context.Context, userId int, sessi
 	return nil
 }
 
-func (r *SessionRepository) RemoveExceptCurrentSession(ctx context.Context, userId int, sessionId int) ex.Error {
+func (r *SessionRepository) RemoveExceptCurrentSession(ctx context.Context, userId string, sessionId int) ex.Error {
 	query := fmt.Sprintf("DELETE FROM %s WHERE user_id = $1 AND session_id != $2;", keys.SessionTable)
 	_, err := r.db.Exec(ctx, query, userId, sessionId)
 	if err != nil {
@@ -125,7 +126,7 @@ func (r *SessionRepository) RemoveSessionByToken(ctx context.Context, token stri
 	return nil
 }
 
-func (r *SessionRepository) RemoveAllSessions(ctx context.Context, userId int) ex.Error {
+func (r *SessionRepository) RemoveAllSessions(ctx context.Context, userId string) ex.Error {
 	query := fmt.Sprintf("DELETE FROM %s WHERE user_id = $1;", keys.SessionTable)
 
 	_, err := r.db.Exec(ctx, query, userId)
@@ -135,7 +136,7 @@ func (r *SessionRepository) RemoveAllSessions(ctx context.Context, userId int) e
 	return nil
 }
 
-func (r *SessionRepository) GetUserSessions(ctx context.Context, userId int, token string) (*model.UserSessionsResponse, ex.Error) {
+func (r *SessionRepository) GetUserSessions(ctx context.Context, userId string, token string) (*model.UserSessionsResponse, ex.Error) {
 	q := fmt.Sprintf(`SELECT session_id, user_id, user_agent, refresh_token, created_at, updated_at, ip
 	FROM %s WHERE user_id = $1 ORDER BY updated_at DESC;`, keys.SessionTable)
 

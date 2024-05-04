@@ -11,6 +11,7 @@ import (
 	"github.com/maximfedotov74/cloud-api/internal/shared/db"
 	"github.com/maximfedotov74/cloud-api/internal/shared/ex"
 	"github.com/maximfedotov74/cloud-api/internal/shared/keys"
+	"github.com/maximfedotov74/cloud-api/internal/shared/queries"
 )
 
 const (
@@ -184,7 +185,21 @@ func (r *RoleRepository) FindWithUsers(ctx context.Context) ([]model.Role, ex.Er
 	}
 
 	return roles, nil
+}
 
+func (r *RoleRepository) CheckRolesInUser(ctx context.Context, userId string, roles ...string) bool {
+	q := queries.GenerateRoleCheckerQuery(userId, roles...)
+
+	row := r.db.QueryRow(ctx, q)
+
+	count := 0
+
+	err := row.Scan(&count)
+	if err != nil {
+		return false
+	}
+
+	return count > 0
 }
 
 func (r *RoleRepository) AddToUser(ctx context.Context, roleId int, userId string, tx db.Transaction) ex.Error {
@@ -216,7 +231,7 @@ func (r *RoleRepository) Remove(ctx context.Context, roleId int) ex.Error {
 	return nil
 }
 
-func (r *RoleRepository) RemoveFromUser(ctx context.Context, roleId int, userId int) ex.Error {
+func (r *RoleRepository) RemoveFromUser(ctx context.Context, roleId int, userId string) ex.Error {
 
 	query := fmt.Sprintf("DELETE FROM %s WHERE user_id = $1 AND role_id = $2;", keys.UserRoleTable)
 	_, err := r.db.Exec(ctx, query, userId, roleId)

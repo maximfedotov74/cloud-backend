@@ -2,14 +2,12 @@ package mail
 
 import (
 	"fmt"
-	"log"
 )
 
 const site = "CloudMax"
 
 func (m *MailService) createActivationTemplate(link string, email string) string {
 	l := m.config.AppLink + link
-	log.Println(l)
 	return fmt.Sprintf(`
   <!DOCTYPE html>
 		<html>

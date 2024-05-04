@@ -1,6 +1,9 @@
 package model
 
-import "time"
+import (
+	"net"
+	"time"
+)
 
 type Session struct {
 	SessionId int       `json:"session_id" db:"session_id" validate:"required"`
@@ -9,7 +12,7 @@ type Session struct {
 	UserId    string    `json:"user_id" db:"user_id" validate:"required"`
 	UserAgent string    `json:"user_agent" db:"user_agent" validate:"required"`
 	Token     string    `json:"-" db:"token" validate:"required"`
-	Ip        string    `json:"-"`
+	Ip        net.IP    `json:"-"`
 }
 
 type UserSessionsResponse struct {
@@ -21,5 +24,5 @@ type LocalSession struct {
 	UserId    string `json:"user_id"`
 	UserAgent string `json:"user_agent"`
 	Email     string `json:"email"`
-	Ip        string `json:"-"`
+	Ip        net.IP `json:"-"`
 }

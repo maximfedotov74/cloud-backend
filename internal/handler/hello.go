@@ -11,6 +11,7 @@ import (
 	"github.com/maximfedotov74/cloud-api/internal/model"
 	"github.com/maximfedotov74/cloud-api/internal/mw"
 	"github.com/maximfedotov74/cloud-api/internal/shared/ex"
+	"github.com/maximfedotov74/cloud-api/internal/shared/keys"
 	"github.com/maximfedotov74/cloud-api/internal/shared/utils"
 )
 
@@ -21,13 +22,17 @@ var msgs = []model.Hello{}
 type HelloHandler struct {
 	config *cfg.Config
 	router *http.ServeMux
+	authMW mw.AuthMW
+	roleMw mw.RoleMw
 }
 
-func NewHelloHandler(config *cfg.Config, router *http.ServeMux) *HelloHandler {
-	return &HelloHandler{config: config, router: router}
+func NewHelloHandler(config *cfg.Config, router *http.ServeMux, authMW mw.AuthMW, roleMw mw.RoleMw) *HelloHandler {
+	return &HelloHandler{config: config, router: router, authMW: authMW, roleMw: roleMw}
 }
 
 func (h *HelloHandler) StartHandlers() {
+
+	adminMw := h.roleMw(keys.AdminRole)
 
 	h.router.HandleFunc("POST /api/hello", h.createMessage)
 
@@ -35,7 +40,7 @@ func (h *HelloHandler) StartHandlers() {
 
 	h.router.HandleFunc("GET /api/hello/{id}", h.getMessageById)
 
-	h.router.HandleFunc("GET /api/auth", mw.AuthMw(h.auth))
+	h.router.HandleFunc("GET /api/hello/test", h.authMW(adminMw(h.auth)))
 }
 
 // @Summary Create Message
@@ -139,12 +144,13 @@ func (h *HelloHandler) getMessageById(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *HelloHandler) auth(w http.ResponseWriter, r *http.Request) {
-	// user, ok := r.Context().Value("user").(string)
 
-	// if !ok {
-	// 	utils.WriteJSON(w, http.StatusUnauthorized, ex.NewErr(ex.UNAUTHORIZED, http.StatusUnauthorized))
-	// 	return
-	// }
+	localSession, fall := utils.GetLocalSession(r)
 
-	utils.WriteJSON(w, http.StatusAccepted, "asd")
+	if fall != nil {
+		utils.WriteJSON(w, fall.Status(), fall)
+		return
+	}
+
+	utils.WriteJSON(w, http.StatusAccepted, localSession)
 }

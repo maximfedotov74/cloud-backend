@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 
 	"github.com/google/uuid"
@@ -96,8 +95,6 @@ func (ps *PaymentService) RefundPayment(paymentId string, totalPrice float64) (*
 		return nil, err
 	}
 
-	log.Println(response.StatusCode)
-
 	if response.StatusCode != http.StatusOK {
 		return nil, errors.New("ошибка при оформлении возврата")
 	}
@@ -107,7 +104,6 @@ func (ps *PaymentService) RefundPayment(paymentId string, totalPrice float64) (*
 	if err != nil {
 		return nil, err
 	}
-	log.Println(p)
 	return &p, nil
 }
 

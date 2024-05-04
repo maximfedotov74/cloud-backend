@@ -31,10 +31,10 @@ type userRepository interface {
 
 type userSessionRepository interface {
 	Create(ctx context.Context, dto dto.CreateSession) ex.Error
-	GetUserSessions(ctx context.Context, userId int, token string) (*model.UserSessionsResponse, ex.Error)
-	RemoveSession(ctx context.Context, userId int, sessionId int) ex.Error
-	RemoveExceptCurrentSession(ctx context.Context, userId int, sessionId int) ex.Error
-	RemoveAllSessions(ctx context.Context, userId int) ex.Error
+	GetUserSessions(ctx context.Context, userId string, token string) (*model.UserSessionsResponse, ex.Error)
+	RemoveSession(ctx context.Context, userId string, sessionId int) ex.Error
+	RemoveExceptCurrentSession(ctx context.Context, userId string, sessionId int) ex.Error
+	RemoveAllSessions(ctx context.Context, userId string) ex.Error
 }
 
 type fileClient interface {
@@ -193,6 +193,6 @@ func (s *UserService) ChangePassword(ctx context.Context, input dto.ChangePasswo
 	return &tokens, nil
 }
 
-func (s *UserService) GetUserSessions(ctx context.Context, userId int, token string) (*model.UserSessionsResponse, ex.Error) {
+func (s *UserService) GetUserSessions(ctx context.Context, userId string, token string) (*model.UserSessionsResponse, ex.Error) {
 	return s.sessionRepository.GetUserSessions(ctx, userId, token)
 }
